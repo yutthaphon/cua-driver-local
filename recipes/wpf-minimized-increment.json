@@ -1,0 +1,20 @@
+{
+  "name": "wpf-minimized-increment",
+  "description": "Launch the WPF counter fixture fresh, minimize it, and deliver one background semantic click while the window stays iconic (the local patch's contract).",
+  "app": "wpf_counter_fixture.exe",
+  "window": "CuaTestHarness WPF",
+  "include": ["wpf-minimize", "wpf-increment"],
+  "launch": {
+    "path": "%USERPROFILE%/source/repos/cua-lab/wpf_counter_fixture/bin/Debug/net10.0-windows/wpf_counter_fixture.exe",
+    "additional_arguments": [
+      "%USERPROFILE%/source/repos/cua-lab/state-wpf-recipe.json"
+    ]
+  },
+  "observe": true,
+  "verified": "2026-10-15",
+  "vars": {
+    "expected": "1"
+  },
+  "notes": "Composed: steps come from the wpf-minimize and wpf-increment sub-recipes, in that order (included steps run first), and this file owns the launch, the target and the expected value. One command launches a fresh fixture (counter 0, state file overwritten) through launch_app, then replays the sub-recipes. The launch pins the pid/window_id it created unless --no-launch is given, because a stale instance shares the title; --var expected=<counter+1> reruns it against a live window. Paths use %USERPROFILE% so the recipe is not tied to one machine's user directory. See recipes/README.md for the composition rules.",
+  "steps": []
+}

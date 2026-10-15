@@ -1,0 +1,15 @@
+{
+  "name": "wpf-increment",
+  "description": "Sub-recipe: one background semantic click on Increment, checked against the fixture's label.",
+  "window": "CuaTestHarness WPF",
+  "observe": true,
+  "verified": "2026-10-15",
+  "vars": {
+    "expected": "1"
+  },
+  "notes": "Sub-recipe: drives the counter by one, whatever state the window is in (works iconic and restored). It does not launch and does not minimize - wrappers do that. The counter is cumulative, so pass --var expected=<value+1> when the fixture has already been clicked; the check is a substring match on the label row.",
+  "steps": [
+    { "click": { "name": "Increment", "role": "Button" } },
+    { "expect": [ { "text": "counter={{expected}}" } ] }
+  ]
+}

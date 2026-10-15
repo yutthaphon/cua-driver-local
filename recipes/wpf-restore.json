@@ -1,0 +1,12 @@
+{
+  "name": "wpf-restore",
+  "description": "Sub-recipe: restore the WPF counter fixture window and check the frame button flipped back.",
+  "window": "CuaTestHarness WPF",
+  "observe": true,
+  "verified": "2026-10-15",
+  "notes": "Sub-recipe: the counterpart to wpf-minimize, and the way back from an iconic window when a step needs coordinates, a screenshot or foreground delivery (none of which work while minimized). The check is the frame button's label: 'Restore' while iconic, 'Minimize' while restored. Not idempotent in the same way as its twin - running it on an already-restored window fails with `no Button \"Restore\"`, so it is a move, not a state assertion; use a check on the window itself when the question is 'is it iconic?'.",
+  "steps": [
+    { "click": { "name": "Restore", "role": "Button" } },
+    { "expect": [ { "name": "Minimize", "role": "Button" } ] }
+  ]
+}

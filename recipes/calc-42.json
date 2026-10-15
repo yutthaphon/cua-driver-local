@@ -1,0 +1,22 @@
+{
+  "name": "calc-42",
+  "description": "Calculator: background clicks 6 x 7 = and check the display row reads 42.",
+  "window": "Calculator",
+  "launch": {
+    "name": "Calculator"
+  },
+  "observe": true,
+  "verified": "2026-10-15",
+  "vars": {
+    "product": "42"
+  },
+  "notes": "Launches Calculator every run (no launch_if_missing) and pins the window that launch produced: packaged (UWP) apps resolve by window title, and several live windows can share the title 'Calculator' — an old pid 23336 window on this host answers every read with ax_tree_empty (39-element trees come from the ApplicationFrameHost-hosted window instead). Command-line `--window` alone therefore picks the frontmost match, which can be the sick one; the launch makes the run deterministic. Do not add an `app` field here: `Microsoft.WindowsCalculator_8wekyb3d8bbwe!App` is an AUMID, and the driver's `app` selector matches process names, so it refuses with `no window of app`. Verified: `Display is 42` after Clear/6/Multiply by/7/Equals.",
+  "steps": [
+    { "click": { "name": "Clear" } },
+    { "click": { "name": "Six" } },
+    { "click": { "name": "Multiply by" } },
+    { "click": { "name": "Seven" } },
+    { "click": { "name": "Equals" } },
+    { "expect": [ { "text": "Display is {{product}}" } ] }
+  ]
+}

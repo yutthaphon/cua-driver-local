@@ -1,0 +1,13 @@
+{
+  "name": "charmap-copy-first",
+  "description": "Character Map: bring the dialog up if needed, then Select the default glyph into the copy field.",
+  "app": "charmap.exe",
+  "window": "Character Map",
+  "include": ["charmap-select"],
+  "launch": { "path": "%SystemRoot%/System32/charmap.exe" },
+  "launch_if_missing": true,
+  "observe": true,
+  "verified": "2026-10-15",
+  "notes": "Composed: the steps live in the charmap-select sub-recipe; this file owns the launch, the target and the exact way it may be brought up. Launches only when no charmap window is up (launch_if_missing), so replaying does not pile up instances on the same coordinates. %SystemRoot% rather than a hardcoded drive keeps it valid on any Windows install. Cheap background smoke test: no foreground activation, works while the window is minimized.",
+  "steps": []
+}

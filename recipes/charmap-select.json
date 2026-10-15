@@ -1,0 +1,15 @@
+{
+  "name": "charmap-select",
+  "description": "Sub-recipe: click Select on Character Map and check the 'Characters to copy' edit took the glyph.",
+  "window": "Character Map",
+  "observe": true,
+  "verified": "2026-10-15",
+  "vars": {
+    "glyph": "!"
+  },
+  "notes": "Sub-recipe: no launch block, so it runs against whatever Character Map window is up. Select appends the currently highlighted grid cell, so the check is `contains`, not an exact value, and replay stays green (measured: '!\\r' -> '!!\\r'). The grid itself is custom-drawn, so this cannot choose a different glyph by name - see apps/character-map.md.",
+  "steps": [
+    { "click": { "name": "Select", "role": "Button" } },
+    { "expect": [ { "name": "Characters to copy :", "role": "Edit", "value_contains": "{{glyph}}" } ] }
+  ]
+}

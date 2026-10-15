@@ -1,0 +1,12 @@
+{
+  "name": "wpf-minimize",
+  "description": "Sub-recipe: minimize the WPF counter fixture window (one step, reusable prelude) and check the frame button flipped.",
+  "window": "CuaTestHarness WPF",
+  "observe": true,
+  "verified": "2026-10-15",
+  "notes": "Sub-recipe: no launch block, because a wrapper owns the launch and the target. The check is the frame button's own label: it reads 'Minimize' while restored and 'Restore' while iconic, so this proves the window actually parked. Consequence, measured: this file only works on a restored window - replaying it on an already-iconic one fails with `no Button \"Minimize\" ... nearest: [2] Button \"Restore\"`, so use wpf-restore as its counterpart rather than running it twice. After it, the window is iconic (183x34 @-31992,-32000): semantic clicks still land, coordinates and screenshots do not.",
+  "steps": [
+    { "click": { "name": "Minimize", "role": "Button" } },
+    { "expect": [ { "name": "Restore", "role": "Button" } ] }
+  ]
+}
