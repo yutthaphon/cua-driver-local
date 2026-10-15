@@ -20,6 +20,7 @@ pitfalls that each cost a round trip, per-app profiles, and replayable recipes.
 | `fork.md` | the `yutthaphon/cua` fork holding the driver patch: push, rebase, reinstall, provenance |
 | `tools/cuad.py` | fast client: window resolution by title, batched actions, compact reads, recipes |
 | `tools/ccdrv.py` | raw passthrough to either product (`--bin local\|release`) |
+| `LICENSE` | MIT (this repo's content) |
 
 ## Quickstart
 
@@ -40,6 +41,13 @@ cuad act --window Calculator --click Clear --click Six --click "Multiply by" \
 | `charmap-copy-first` (+ `charmap-select`) | classic Win32 edit, launch-if-missing, field-value check | 2026-10-15 |
 | `wpf-minimized-increment` (+ `wpf-minimize`, `wpf-increment`) | composed sub-recipes; a semantic click lands while the window stays iconic | 2026-10-15 |
 | `wpf-minimize` / `wpf-restore` | the frame button toggles label; proves the park and the way back | 2026-10-15 |
+
+## License
+
+MIT — see [`LICENSE`](LICENSE). That covers this repository (the skill text, profiles, recipes
+and the two clients in `tools/`). The driver patch is not in this repo: it is a branch of the
+upstream project in the [`yutthaphon/cua`](https://github.com/yutthaphon/cua) fork, and the
+upstream repository is MIT as well (`LICENSE.md`, `Copyright (c) 2025 Cua AI, Inc.`).
 
 ## Machine-specific by design
 
