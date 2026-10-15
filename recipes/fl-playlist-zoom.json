@@ -1,0 +1,37 @@
+{
+  "name": "fl-playlist-zoom",
+  "description": "Sub-recipe: set FL Studio's playlist to one of its four quick-zoom levels and centre the view on the playhead.",
+  "window": "FL Studio",
+  "vars": {
+    "zoom": "1"
+  },
+  "observe": false,
+  "verified": "2026-10-15",
+  "notes": [
+    "zoom is FL's quick-zoom level: shift+1, shift+2, shift+3, shift+4 ('show all'). Measured on this host, as the ruler-label spacing in a 2558-px-wide window: level 1 = 40 px, level 2 = 60 px, level 3 = 239.5 px, level 4 = 36 px. Each level is a different complete view, not a step.",
+    "shift+0 centres the view on the playhead (FL manual); run fl-playlist-focus first or the playhead is wherever the user left it.",
+    "The keys must be foreground: a background shift+1 reports ok and changes nothing.",
+    "At level 4 a 24-minute episode spans ~1250 px of clip area, i.e. ~1.2 s per pixel: level 4 is for overview only. Sub-second alignment cannot be seen at any level (0.5 s is half a pixel), so verify timing from the audio, not from this view.",
+    "Proof: the ruler labels change spacing (levels 1..4 = 40/60/239.5/36 px) and the clip lanes move; capture with `cuad shot` and read it with tools/flplaylist.py."
+  ],
+  "steps": [
+    {
+      "hotkey": {
+        "keys": [
+          "shift",
+          "{{zoom}}"
+        ],
+        "delivery_mode": "foreground"
+      }
+    },
+    {
+      "hotkey": {
+        "keys": [
+          "shift",
+          "0"
+        ],
+        "delivery_mode": "foreground"
+      }
+    }
+  ]
+}

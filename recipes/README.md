@@ -113,3 +113,4 @@ cuad run <name> --var <k>=<wrong>    # fails with exit 1 (a check that cannot fa
 | `charmap-copy-first` (+ `charmap-select`) | classic Win32 edit, launch-if-missing, `--value` check | 2026-10-15 |
 | `wpf-minimized-increment` (+ `wpf-minimize`, `wpf-increment`) | composed sub-recipes; semantic click lands while the window stays iconic | 2026-10-15 |
 | `wpf-minimize` / `wpf-restore` | the frame button toggles label; proves the park and the way back | 2026-10-15 |
+| `fl-playlist-view` (+ `fl-playlist-focus`, `fl-playlist-zoom`) | an app with **no** accessibility tree and **no** native menu: the batch can only drive, so the check is a screenshot the caller reads; the measured way to focus the playlist and set one of the four quick-zoom levels | 2026-10-15 |

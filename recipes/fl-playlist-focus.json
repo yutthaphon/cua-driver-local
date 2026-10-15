@@ -1,0 +1,27 @@
+{
+  "name": "fl-playlist-focus",
+  "description": "Sub-recipe: give FL Studio's playlist the keyboard focus and move the playhead to the song start.",
+  "window": "FL Studio",
+  "observe": false,
+  "verified": "2026-10-15",
+  "notes": [
+    "The click at (1400,168) lands on the playlist ruler: it is what puts the keyboard focus in the playlist pane, without which home/PgUp/Enter go nowhere (measured: a background key with no click changed 14 px, the same key after this click changed 190341 px).",
+    "Both steps are foreground: FL drops background key events silently.",
+    "Proof: the transport clock (native x 900-1060, y 6-40) reads 0:00:00 after this sub-recipe. FL exposes no accessibility tree, so the check is a screenshot the caller takes.",
+    "Coordinate (1400,168) is a screenshot coordinate of the loaded layout, not an element: re-measure it if the window is rearranged."
+  ],
+  "steps": [
+    {
+      "click": {
+        "x": 1400,
+        "y": 168
+      }
+    },
+    {
+      "press_key": {
+        "key": "home",
+        "delivery_mode": "foreground"
+      }
+    }
+  ]
+}

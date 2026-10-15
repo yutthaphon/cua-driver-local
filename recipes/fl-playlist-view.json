@@ -1,0 +1,23 @@
+{
+  "name": "fl-playlist-view",
+  "description": "Put FL Studio's playlist into a reproducible view (focused, playhead at the song start, chosen zoom level, centred) without touching the project.",
+  "window": "FL Studio",
+  "include": [
+    "fl-playlist-focus",
+    "fl-playlist-zoom"
+  ],
+  "vars": {
+    "zoom": "1"
+  },
+  "observe": false,
+  "verified": "2026-10-15",
+  "notes": [
+    "Wrapper: fl-playlist-focus (click the ruler, then home) followed by fl-playlist-zoom (shift+N, then shift+0). --var zoom=4 gives the whole-episode overview, --var zoom=1 the closest of the four quick levels.",
+    "Nothing inside the batch can be checked: FL Studio exposes no accessibility tree (cuad ax -> elements=0/0) and no native menu (invoke_menu refuses with menu_path_unavailable), so an `expect` needs role/name/text and is refused with `invalid_batch: expect 1: needs role, name or text to say which element`. The batch drives only; its only failure surface is target resolution: `--window NoSuchApp2` fails at step 0 with `no window titled like \"NoSuchApp2\"` and exit 1 (measured).",
+    "PROOF OF THE VIEW (caller's job): `cuad shot --window \"FL Studio\" -o fl.png` or a native capture (get_window_state with include_accessibility_tree:false, max_image_dimension:0 -> 2558x1538), then `py -3.14 tools/flplaylist.py geometry fl.png` for the lane count and each lane's pixel extent, and read the transport clock (native x 900-1060, y 6-40) -- after this recipe it reads 0:00:00.",
+    "Measured clock scale on this host, level 4: ruler x=1350 -> 8:22:15, x=2500 -> 24:07:38, i.e. 0.822 s per pixel. A 0.5 s mistake is 0.6 px: never read timing off this view; use the audio.",
+    "If a previous batch left FL minimized, reads fail with 'cannot capture minimized window ... has no rendered content'; run `cuad call bring_to_front '{\"pid\":<pid>,\"window_id\":<wid>}'` first (bring_to_front is not a step tool).",
+    "Keep one --session label for the whole run: a raw driver call from another session is refused with screenshot_context_missing / other_session."
+  ],
+  "steps": []
+}
