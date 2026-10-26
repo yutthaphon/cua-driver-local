@@ -140,6 +140,36 @@ The log is **UTF-16LE**; read it with `-Encoding Unicode`. Parse `Result: N erro
 warnings` and treat a warning as a failure when the build gate says so. MetaEditor
 returns exit code 1 for a failed compile but the log is the authority.
 
+## What works and what does not (measured 2026-10-26, build 5.0.0.6230)
+
+One session's worth of negative results, so the next visit does not repeat them.
+
+| Attempt | Result |
+| --- | --- |
+| `click` with `x,y` + `scope:"desktop"` + `delivery_mode:"foreground"` on a **toolbar button** | **works** — clicked `M5` and the chart switched timeframe (the toolbar button highlights) |
+| the same click **without** `pid` | lands on whatever HWND is under the point: the summary names the HWND it used, and it was an unrelated window (`0x330fee`). Always pass `pid`. |
+| `right_click` tool with window-local `x,y` | refused `screenshot_context_missing` / `window_never_read` even after a `get_window_state` step in the same batch, because that read comes back `degraded` and yields no capture |
+| `invoke_menu` on `["Charts","Indicators List"]` | refused `menu_path_unavailable: segment 0 was not found` — MT5 exposes **no UIA menus at all**, so the menu bar cannot be driven by name |
+| `press_key` F7 / PageDown into the Navigator | no visible effect; the Navigator's tree is not reachable by keys. `type_text` reports success (`SendInput`) but the tree does not filter |
+| `stop-Process terminal64` to get a clean state | **do not**. MT5 restores the previous profile, which turns the user's maximised single chart into a tiled workspace, and it destroys whatever the user had focused |
+
+**Left-click reaches MT5; right-click menus open but cannot be captured.** Measured with the
+user watching: a desktop-scope right-click on the chart DOES open the context menu, and the menu
+closes as soon as foreground moves — so a `cuad shot` issued as a separate call races the user's
+own window switch. Treat a menu screenshot as unreliable evidence, and prefer app-owned state.
+
+**The reliable ways to get an indicator onto a chart, in order:**
+
+1. Ask the user to drag it from the Navigator (one gesture, no automation risk).
+2. `/config:` with `Indicator=PatternCast\\PatternCast` at launch time — but a launch reuses an
+   already running terminal (pitfall 1), so this needs the terminal closed first.
+3. `ChartApplyTemplate(0, "PCProbe.tpl")` from a script, with a `.tpl` under
+   `MQL5\\Profiles\\Templates\\` that names the indicator. The script still has to be started,
+   which is the same problem one level down.
+
+`ChartIndicatorsTotal(0, 0)` is the app-owned check for "is it attached", and it is worth putting
+in any probe: it answers the question without a screenshot.
+
 ## Why there is no `recipes/mt5-*.json`
 
 A launch-only flow cannot be expressed in the recipe schema: `cuad run` rejects a recipe
