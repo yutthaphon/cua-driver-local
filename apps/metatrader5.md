@@ -140,6 +140,52 @@ The log is **UTF-16LE**; read it with `-Encoding Unicode`. Parse `Result: N erro
 warnings` and treat a warning as a failure when the build gate says so. MetaEditor
 returns exit code 1 for a failed compile but the log is the authority.
 
+## Keyboard shortcuts (official, metatrader5.com/en/terminal/help/start_advanced/hotkeys)
+
+These are the platform's own hotkeys, read from the vendor documentation. The ones that matter
+for driving MT5 from the outside are the **window-independent** block: those fire whatever has
+focus, which is exactly the property a driver needs.
+
+### Independent of the active window (the useful set)
+
+| Keys | Action |
+| --- | --- |
+| `Ctrl+I` | **Indicators List** — the dialog has an `Add` button, so this is the reliable way to attach an indicator without the Navigator |
+| `Ctrl+B` | Objects List |
+| `Ctrl+W` / `Ctrl+F4` | **Close the current chart window** — a popped-out VPS or extra chart is a chart window, so this closes it |
+| `Ctrl+F6` / `Ctrl+Shift+F6` | previous / next chart window |
+| `Alt+W` | open chart managing window |
+| `F8` | chart setup |
+| `F7` | properties of the EA/indicator **attached to** a chart — needs an attachment to already exist |
+| `F11` | fullscreen (hides every window except the chart; a re-enter hides manually opened windows again and does not save the change) |
+| `Ctrl+N` | open/close Navigator (a toggle: pressing it twice closes it again) |
+| `Ctrl+M` / `Ctrl+T` / `Ctrl+R` | Market Watch / Toolbox / Tester, all toggles |
+| `Ctrl+O` | Settings |
+| `Esc` | close dialog windows |
+| `F4` | MetaEditor |
+
+### Navigator window (when IT has focus)
+
+| Keys | Action |
+| --- | --- |
+| `Enter` | opens the selected expert/indicator/script **in MetaEditor** — it does NOT attach it to a chart |
+| `Delete` | delete the selected item |
+| `Insert` | new account |
+| `G` | show/hide grid in Favorites |
+
+So: **the Navigator cannot attach an indicator by keyboard.** `Enter` edits it. That is why the
+attach path is `Ctrl+I` -> `Add`, not the Navigator.
+
+### Chart window (when IT has focus)
+
+Arrows scroll (Up/Down are *fast* scroll), `Page Up/Down` fast scroll, `Home`/`End` jump to the
+start/end of history, `+`/`-` zoom, `Delete` deletes selected objects, `Backspace` deletes the
+most recent objects, `Enter` opens the fast navigation bar, `NumPad 5` restores the vertical scale.
+
+**`End` jumps the chart to the end of history — and in the Navigator it jumps the tree selection
+to the last item**, which is how a Navigator sitting on `Scripts` ends up showing the last script
+instead of the indicators. Measured the hard way.
+
 ## What works and what does not (measured 2026-10-26, build 5.0.0.6230)
 
 One session's worth of negative results, so the next visit does not repeat them.
