@@ -43,7 +43,7 @@ one of them is a *click coordinate*, so they must be re-measured if the layout c
 | Main transport / tempo | x ≈ 560-800 (tempo), x ≈ 1250-1900 (position sliders) | |
 | Focus the playlist | click anywhere on a clip or the ruler (e.g. 1400,168) | FL's keys go to the focused pane |
 | Playlist horizontal zoom | `press_key pageup` / `pagedown` (foreground) | measured: bar/label spacing 48.5 → 57.0 → 66.0 px per PgUp; the *view* also jumped (340230 px changed) |
-| Playlist zoom levels | `shift+1`, `shift+2`, `shift+3`, `shift+4` (foreground) | measured spacings 40, 60, 239.5, 36 px (every one of them a *different* complete view; `shift+4` = "show all") |
+| Playlist zoom levels | `shift+1`, `shift+2`, `shift+3`, `shift+4` (foreground) | measured label spacings 40, 60, 239.5, 36 px; where the *view* actually is: level 1 = 0.2363 s/px, level 3 = 0.00762 s/px, level 4 = 0.822 s/px (see pitfall 5) |
 | Playhead to song start | `press_key home` (foreground) | |
 | Centre the view on the playhead | `shift+0` | documented in FL's manual; not separately measured |
 | Playlist visible/not + max/min | `press_key f5` toggles the window; `press_key return` toggles max/min | measured: F5 changed 329486 px, a second F5 changed 1490418 px |
@@ -63,10 +63,13 @@ one of them is a *click coordinate*, so they must be re-measured if the layout c
    keep one `session` label for a run and pass it to every call.
 4. **Keys land on the focused pane, and focus is where the last click was.** Without a click the
    document window may be focused and PgUp/PgDn do nothing (`changed 14 px`).
-5. **`shift+4`** ("show all") is not "fit to content": after it, the view spans ~1250 px of the
-   content area for a 24-minute project, i.e. **~1.2 s/pixel**. Sub-second alignment can therefore
-   **not** be checked by eye or by pixels at any of the four zoom levels — 0.5 s is half a pixel.
-   Use the audio itself for anything tighter; FL's playlist is the visual reference.
+5. **The clock is what makes the view a ruler; the zoom levels differ by 30x.** Calibrated on this
+   host by clicking the ruler and reading the transport clock (`M:S:CS`): level 4 ("show all")
+   x=1350 -> 8:22:15, x=2500 -> 24:07:38 -> **0.822 s/px**; level 1 x=1000 -> 0:00:00,
+   x=2000 -> 3:56:30 -> **0.2363 s/px**; level 3 x=900 -> 0:01:38, x=1900 -> 0:09:00 ->
+   **0.00762 s/px**. So level 3 shows ~7.6 ms per pixel (`0.5 px = 3.8 ms`) and the whole playlist
+   fits one screen only at level 4. **Verify timing at level 3, orient at level 4**; do not judge
+   alignment at level 4, where 0.5 s is 0.6 px.
 6. **FL's waveform pixels do not encode the audio linearly enough to identify a clip.** Measured
    attempt: fitting each lane's pixel envelope (mean green brightness *and* vertical outline height)
    to each candidate file's RMS/dB envelope gave r ≈ 0.3-0.6 with wrong file assignments for every
