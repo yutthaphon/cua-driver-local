@@ -38,8 +38,13 @@ ScriptParameters=InpRun=1||InpVerbose=true
 - **A `/` anywhere in `ScriptParameters` breaks the line** — the terminal reads it as a
   switch. `InpPath=PatternCast/Tests` silently truncates. Hardcode such paths in the
   source instead (measured: three failed launches before this was identified).
-- `Script=` is relative to `MQL5\Scripts`, `Indicator=` to `MQL5\Indicators`. A script
-  compiled under `MQL5\Scripts\PatternCast\Tests\X.ex5` is `PatternCast\Tests\X`.
+- `Script=` is relative to `MQL5\Scripts`, `Indicator=` to `MQL5\Indicators`, and the
+  path must match the junction layout exactly, not the on-disk layout. On this host
+  `MQL5\Scripts\PatternCast` is a junction to `D:\PatternCast\PatternCast\Tests`, so a
+  script living at `Tests\T01_AtrExact.mq5` is `Script=PatternCast\T01_AtrExact` — writing
+  `PatternCast\Tests\T01_AtrExact` silently does nothing (the terminal starts, no script
+  runs, no log line, no error). Check what the junction exposes before naming a script:
+  `powershell -c "Get-ChildItem <MQL5>\Scripts\PatternCast | Select Name"`.
 - `iCustom()` inside a script takes a path relative to `MQL5\Indicators`, with
   **backslashes**, and it must include the `Tests` subfolder if that is where it lives:
   `iCustom(_Symbol, PERIOD_CURRENT, "PatternCast\\Tests\\PanelProbe")`.
