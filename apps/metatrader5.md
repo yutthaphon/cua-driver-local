@@ -213,14 +213,34 @@ Service=VertaMTF_Core
 MT5's own log then says `Startup successfully initialized from start config` and **nothing
 starts** (measured twice, 2026-11-06 22:00 and 22:01).
 
-**Double-click in the Navigator is the route**, and it is the same physical
-`double-click --headed` used for scripts above — the user started `VertaMTF_Core` that way
-(terminal log `2026.11.06 23:37:52.631 Services service 'VertaMTF_Core' started`).
-Automating it is untested only because the service was already running when the double-click
-path was proven; the leaf is `Services → <Folder> → <Name>` and the tree exposes it, so try
-`double-click --headed` on that leaf and confirm from the terminal log or the service's own
-log under `MQL5\Files\...` — never from the window state. Do not `click` it: semantic
-Invoke is refused (see Accessibility).
+**A terminal restart restarts the service for you** (measured 2026-11-07, three times): after
+a normal close the service logs `service stopped`; on the next plain launch MT5 starts it
+again by itself ~4 s later, with no Navigator interaction at all. That is the reliable way to
+put a freshly compiled `.ex5` into service — **do not** hunt for a Start gesture:
+
+```bash
+# normal close (never a kill), then plain launch with the same profile
+CloseMainWindow  -> wait for exit
+Start-Process terminal64.exe          # no /config, no /portable
+# ~4 s later the service is up; prove it from ITS OWN log, not from the window
+```
+
+**Do not double-click a service that is already running.** Measured: it opens a modal titled
+with the service name (`Expert Advisor settings` → checkbox `Allow Algo Trading`,
+OK/Cancel/Reset), which starts nothing and — worse — **blocks `CloseMainWindow`**: the terminal
+did not exit within 60 s until that dialog was cancelled.
+
+**Stopping a service by menu does not survive the call boundary.** The leaf's context menu
+(`right-click --headed`) does contain the right item:
+
+```
+menu:Context → Algo Trading | ── | Start | Stop | Remove | Rename | Properties
+```
+
+…and `find --surface menu` can read it (`menuitem` rows by name), but **the menu closes as
+soon as focus moves, so a `click` on the item in a later call resolves into a TIMEOUT**. Never
+substitute guessed screen coordinates here: `Remove` sits two rows from `Stop`. The practical
+route is the restart above.
 
 ## Launch with a startup config (this is the workhorse)
 
@@ -508,7 +528,17 @@ Record the flow here and fill in the id at call time.
     a physical send and *does* activate the item (opened a script's input dialog in 208 ms), and
     `expand` works semantically **and** verifies. Do not conclude from a refused `click` that a
     tree item is unusable.
-11. **A script/EA dialog's input values are not readable.** The `Inputs` tab is a `listbox` whose
+11. **`find --root` is the way into the Navigator; a root-scoped `snapshot` is not.** A
+    `snapshot --root @<services ref>` returned `TIMEOUT` (deadline pinned to 3000 ms) while
+    `find --window-id … --root @<outline ref> --name VertaMTF_Core --role treeitem
+    --timeout-ms 20000` answered immediately with all three nested matches and their paths.
+    Use `find` with `--root` when the tree is large, and take the leaf from its `ref_id`.
+12. **A modal blocks every later call, and its symptom looks like "app is unresponsive".**
+    After the service dialog appeared, `snapshot` and `right-click` both returned `TIMEOUT`
+    and `CloseMainWindow` never completed — but `desktop_list_windows` still showed the dialog.
+    When calls start timing out on an app that is `Responding: True`, list windows before
+    anything else; a modal is the usual cause.
+13. **A script/EA dialog's input values are not readable.** The `Inputs` tab is a `listbox` whose
     `ListViewSubItem`s come back as empty `statictext`: UIA reports the row count, not the
     variable names or values. To know what a script will receive, read its `input` defaults in
     the source, or have it write its resolved inputs to a file and check that.
