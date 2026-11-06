@@ -9,7 +9,7 @@ Two driver generations appear in this file:
 
 | Tool | What it can do |
 | --- | --- |
-| `agent-desktop` (`desktop_*` MCP tools) | **preferred.** Reads a real UIA tree, resolves elements by name, clicks semantically (no cursor, no focus steal), detects and presses dialog buttons |
+| `agent-desktop` (`desktop_*` MCP tools) | **preferred.** Reads a real UIA tree, resolves elements by name, presses dialog buttons semantically, expands tree nodes, and `double-click --headed` activates a Navigator item (script / EA / service / indicator) without dragging |
 | `cuad` / `cua-driver-local` (`cuad.py`, `ccdrv`) | coordinate `SendInput`, app launch, screenshots; MT5 exposes nothing to it — `get_window_state` returns `elements=0/0` |
 
 ## Identity
@@ -18,7 +18,7 @@ Two driver generations appear in this file:
 | --- | --- |
 | Process | `terminal64.exe` (NOT `terminal.exe`; both can exist) |
 | Window | one per chart, title `<account> - <broker> - [SYMBOL,TF]` |
-| Dialogs | **separate top-level windows** of the same process — `Properties of <SYM>,<TF>`, `<Script> <ver> (<SYM>,<TF>)`, `Indicators`, … Each gets its own window id, so re-list after opening one |
+| Dialogs | separate top-level windows, `accessible:true` — titles like `Properties of <SYM>,<TF>`, `Moving Average`, `<Script> (XAUUSD-VIP,M5)`; each has its OWN window id, so re-list after opening one |
 | Class | `MetaQuotes::MetaTrader::5.00` |
 | Accessibility | **exposed — but only through agent-desktop.** `cua-driver`'s `get_window_state` returns `elements=0/0`, `degraded:true`; `agent-desktop`'s `desktop_snapshot` reads a full UIA tree (~170 nodes). See the revised section below. |
 | Data folder | `%APPDATA%\MetaQuotes\Terminal\<instance-id>\` |
@@ -44,16 +44,95 @@ Consequences:
   back to coordinates. `cuad--window <title>` coordinate clicks are the *last* resort: in the
   2026-11-06 session a desktop-scope click aimed at the Navigator tree landed on an unrelated
   HWND, and another landed on an unrelated script dialog.
-- **`treeitem`s advertise `Click` but do not accept it.** Clicking the Services →
-  `VertaMTF_Core` node returned `POLICY_DENIED` ("direct semantic delivery is unavailable and
-  physical fallback is denied"); the same with `headed: true` returned `ACTION_FAILED`. So a
-  service/script/indicator still has to be *activated by the user* — reading the tree is fine,
-  starting it is not.
+- **`click` on a `treeitem` is refused; `double-click` works.** Two different channels:
+  `click` (semantic Invoke) on the Services → `VertaMTF_Core` node returned `POLICY_DENIED`
+  ("direct semantic delivery is unavailable and physical fallback is denied"), and with
+  `headed: true` returned `ACTION_FAILED`. But `double-click --headed` is a **physical**
+  send and does activate a Navigator item — measured on a script, which opened its input
+  dialog in 208 ms (see "Activating things from the Navigator" below).
+- **`expand` / `collapse` work and verify.** `expand @ref` returned
+  `delivery: "delivered_verified"` with `post_state.states: ["focused","expanded","selected"]`
+  — the one Navigator action that both works semantically *and* proves it changed state.
+  Use it to open a folder instead of clicking its disclosure triangle.
 - **Dictionary keys come for free.** `desktop_find` on the whole window times out
   (`TIMEOUT`, ~1300 nodes visited) — narrow it with `root: "@<snap>:eN"` or the app's own
   subtree instead of searching the terminal.
 
-## Popups (Properties / attach / script inputs) — fully automatable
+## Activating things from the Navigator (double-click, no dragging)
+
+Measured 2026-11-06. **The user does not have to drag anything onto the chart: a
+`double-click` on the Navigator item is enough**, and it is fully automatable:
+
+```bash
+# 1. expand the folders semantically (verified) — do not click disclosure triangles
+agent-desktop expand @<snap>:<Scripts ref>
+agent-desktop expand @<snap>:<VertaMTF_Tests ref>
+# 2. find the script's ref, then double-click it PHYSICALLY
+agent-desktop double-click @<snap>:<RunAll ref> --headed
+# 3. the script's own dialog appears as a new top-level window
+agent-desktop wait --window "RunAll"          # → 208 ms, title "RunAll (XAUUSD-VIP,M5)"
+```
+
+The same route attaches an **indicator** and raises its parameters popup
+(`Indicators → Trend → Moving Average` → window `Moving Average`, 142 ms) — see below.
+
+`double-click` requires `--headed` (it is physical `SendInput`), and it reports
+`delivery: delivered_unverified` — verify with `list-windows` / `wait`, never by assuming.
+Measured result: the dialog `RunAll (XAUUSD-VIP,M5)` (885×893) opened as its own window
+while the terminal window stayed at `[XAUUSD-VIP,M5]`.
+
+### What the script/EA dialog exposes
+
+```
+window  "RunAll (XAUUSD-VIP,M5)"        role_description: dialog, states [focused, modal]
+├── dialog "Expert Advisor settings"
+│   ├── image, statictext "RunAll"
+│   └── checkbox "Allow Algo Trading"   (checked)
+├── button "OK"      automation_id=1
+├── button "Cancel"  automation_id=2
+├── button "Reset"   automation_id=12321
+├── tablist: Common | Inputs            (Common selected by default)
+└── title bar: Minimize | Maximize(disabled) | Close
+```
+
+On the **Inputs** tab the pane `"Input parameters"` is a `listbox` with a
+`Variable | Value` header and one `option` row per input, plus `Load` / `Save` buttons.
+**The row texts are not readable**: each `ListViewSubItem` is an empty `statictext`, so UIA
+tells you *how many* inputs there are but not their names or values (measured on a script
+with two bool inputs: two `option` rows, both blank).
+
+Consequences:
+
+- Pressing **OK** (`automation_id 1`) runs the script/EA with the current inputs; **Cancel**
+  (`automation_id 2`) aborts it. Both are semantic clicks and both verified by the window
+  disappearing.
+- **Prove the abort, not just the close:** after cancelling, check the artefact the program
+  would have written. Measured: `RunAll` writes `Files\VertaMTF\logs\test_report.txt`; its
+  mtime stayed at `23:43:27` after the `23:5x` Cancel, so the script really did not run.
+- The dialog carries a `checkbox "Allow Algo Trading"` (read as `checked` on this run) — worth a
+  pre-flight read (`desktop_is` / snapshot `states`) before expecting trades. Measured once, on
+  a script; assumed but unproven for EAs.
+- **An indicator double-click raises the same shape** — measured on `Indicators → Trend →
+  Moving Average`: window `Moving Average` (530×330) appeared in **142 ms**, with named,
+  readable fields:
+
+  ```
+  textfield "Period:"  value=10        combobox "Method:"   value=Simple
+  textfield "Shift:"   value=0         combobox "Apply to:" value=Close
+                                       combobox "Style:"    value=Red
+  buttons: OK(1) | Cancel(2) | Reset(12321)
+  tabs: Parameters | Levels | Visualization      (Parameters selected)
+  ```
+
+  Cancel aborted the attach and left the chart untouched — proved by hashing the chart
+  profile before and after: `chart01.chr` kept the same md5 **and** mtime across the attempt.
+  Pressing **OK** is what commits the attach; that commit was only proven on the chart
+  *properties* dialog (same `automation_id 1` semantic invoke), not on an attach.
+- **Do not trust every `value` string on these dialogs.** On that same popup two unnamed
+  comboboxes at the bottom reported mojibake (`砈翷`). The named ones read correctly, so key
+  off the element `name` and treat an unattributed combobox value as unusable.
+
+## Popups (Properties / attach / script inputs) — separate windows, fully automatable
 
 Measured 2026-11-06. MT5 dialogs are **separate top-level windows** of `terminal64.exe`, not
 child controls of the chart window:
@@ -88,9 +167,11 @@ role: window, role_description: dialog, states: ["focused","modal"]
 └── title bar group → "Context help", "Close"
 ```
 
-- **`automation_id` 1 / 2 / 9 for OK / Cancel / Help** on the dialog measured. That is the
-  Win32 `IDOK`/`IDCANCEL`/`IDHELP` convention, so it very likely repeats on MT5's other
-  dialogs — but only this one was measured, so confirm with a snapshot before relying on it.
+- **`automation_id` 1 = OK, 2 = Cancel** on both dialogs measured (chart properties *and*
+  the script input dialog), i.e. the Win32 `IDOK`/`IDCANCEL` convention. `Help` (9) was only
+  seen on Properties. Both dialogs also carry a `Reset` (`automation_id 12321`) on the script
+  one — so address OK/Cancel by `name` **and** check the id, and snapshot before relying on
+  either for a dialog type you have not seen.
 - Clicking is **semantic** (`InvokePattern.Invoke`, no cursor, no focus steal) and it works:
   measured OK closed the dialog and returned focus to the chart window. Verified by
   `desktop_list_windows` afterwards — the entry is gone.
@@ -110,17 +191,19 @@ role: window, role_description: dialog, states: ["focused","modal"]
 | raw `press f8 --window-id w-<chart> --headed` | dialog opened (verified by `list_windows`) |
 | raw `press ctrl+i --window-id w-<chart> --headed` | **still no dialog** — Ctrl+I is not a working entry point on this build |
 
-Only the headed `F8` path is proven; the headless-vs-headed difference for `f8` specifically was
-not isolated (headless was tested with `ctrl+i`).
+Only the headed paths are proven. The headless `ctrl+i` attempt cannot separate "headless
+delivery does not reach MT5" from "Ctrl+I does nothing", so headless key delivery to MT5 is
+simply unproven — do not rely on it.
 
-So: send keys with `--headed` **after** `desktop_focus_window`, and use `F8` (chart
-properties) as the reliable way to raise a dialog for automation tests. `desktop_press`'s
-`delivered_unverified` is exactly what it says.
+**Prefer `double-click --headed` over `F8`** when a Navigator item is the thing you want to
+run: it needs no shortcut to work and it names its target. Keep headed `F8` for raising a chart
+properties dialog. Either way, `desktop_press`'s `delivered_unverified` is exactly what it
+says — confirm with `wait`/`list-windows`, and remember the dialog needs
+`desktop_focus_window` first.
 
 ### Starting the automated-trading Service
 
-`Services` in the Navigator can be *read* but not activated (see above), and the startup ini
-does **not** work for it:
+The **startup ini does not work** for a Service:
 
 ```ini
 [StartUp]
@@ -128,10 +211,16 @@ Service=VertaMTF_Core
 ```
 
 MT5's own log then says `Startup successfully initialized from start config` and **nothing
-starts** (measured twice, 2026-11-06 22:00 and 22:01). The user must double-click the service
-in the Navigator once. After that the terminal log shows
-`Services service 'VertaMTF_Core' started` and the service's own log lands under
-`MQL5\Files\...`. Do not try to fake this with clicks — ask the user.
+starts** (measured twice, 2026-11-06 22:00 and 22:01).
+
+**Double-click in the Navigator is the route**, and it is the same physical
+`double-click --headed` used for scripts above — the user started `VertaMTF_Core` that way
+(terminal log `2026.11.06 23:37:52.631 Services service 'VertaMTF_Core' started`).
+Automating it is untested only because the service was already running when the double-click
+path was proven; the leaf is `Services → <Folder> → <Name>` and the tree exposes it, so try
+`double-click --headed` on that leaf and confirm from the terminal log or the service's own
+log under `MQL5\Files\...` — never from the window state. Do not `click` it: semantic
+Invoke is refused (see Accessibility).
 
 ## Launch with a startup config (this is the workhorse)
 
@@ -335,22 +424,19 @@ own window switch. Treat a menu screenshot as unreliable evidence, and prefer ap
 
 **The reliable ways to get an indicator onto a chart, in order:**
 
-1. Ask the user to drag it from the Navigator (one gesture, no automation risk).
+1. **`double-click --headed` the Navigator item** — no dragging, and it raises the input dialog
+   which `desktop_wait` + a semantic OK/Cancel can handle (measured 2026-11-06).
 2. `/config:` with `Indicator=PatternCast\\PatternCast` at launch time — but a launch reuses an
    already running terminal (pitfall 1), so this needs the terminal closed first.
 3. `ChartApplyTemplate(0, "PCProbe.tpl")` from a script, with a `.tpl` under
    `MQL5\\Profiles\\Templates\\` that names the indicator. The script still has to be started,
    which is the same problem one level down.
+4. Ask the user to drag it (still the zero-risk option when the chart must not be touched).
 
-**The drag-then-OK popup itself is automatable (measured 2026-11-06).** What is not
-automatable is the *drag*: the destination is the chart canvas, which has no UIA element, and
-dragging from a Navigator `treeitem` fails (pitfall 10). But when a drag (or a script launch)
-raises the input/properties dialog, it is a normal accessible window and the OK button can be
-pressed by name — see "Popups" above. So the split is:
-
-- **user**: one drag from Navigator onto the chart (or one double-click to start a service);
-- **agent**: everything the dialog needs afterwards — detect by title, read the tab values,
-  press OK (`automation_id 1`) or Cancel (`automation_id 2`).
+Only the **drag gesture itself** is out of reach: its destination is the chart canvas, which
+has no UIA element. A `double-click` replaces the drag entirely for scripts, EAs and the
+Service, so nothing about attaching needs the user any more — except an indicator, whose
+double-click changes the chart (see "Activating things from the Navigator").
 
 `ChartIndicatorsTotal(0, 0)` is the app-owned check for "is it attached", and it is worth putting
 in any probe: it answers the question without a screenshot.
@@ -377,9 +463,13 @@ through `--var`.
 **A dialog flow *is* expressible with agent-desktop** (window titles, not pids), e.g.
 
 ```bash
+# script/EA/service: double-click its Navigator item (no drag, no shortcut)
+agent-desktop double-click @<snap>:e327 --headed
+agent-desktop wait --window "RunAll"                    # -> "RunAll (XAUUSD-VIP,M5)"
+agent-desktop click @<snap>:e7                          # OK  (automation_id 1)
+# chart properties instead:
 agent-desktop press f8 --window-id w-<chart> --headed
-agent-desktop wait   --window "Properties of XAUUSD-VIP,M5"
-agent-desktop click  @<snap>:e44        # OK
+agent-desktop wait  --window "Properties of XAUUSD-VIP,M5"
 ```
 
 It is not stored as a recipe yet because the chart window id changes on every terminal
@@ -412,7 +502,13 @@ Record the flow here and fill in the id at call time.
    list windows afterwards to check nothing unexpected opened.
 9. **`desktop_find` on the whole terminal times out**, even with a 20 s budget: ~1 300 nodes
    visited, `TIMEOUT`. Scope it (`root: "@<snap>:eN"`) or use a subtree snapshot.
-10. **A `treeitem`'s advertised `Click` is not honoured.** Activating a Navigator leaf returned
-    `POLICY_DENIED` (semantic delivery unavailable, physical fallback denied) and, with
-    `headed`, `ACTION_FAILED`. Reading the tree works; *starting* a service/script/indicator
-    that way does not.
+10. **`click` on a `treeitem` is refused; use `double-click --headed` or `expand`.** A Navigator
+    leaf returned `POLICY_DENIED` from `click` (semantic delivery unavailable, physical fallback
+    denied), and `headed: true` on `click` gave `ACTION_FAILED`. But `double-click --headed` is
+    a physical send and *does* activate the item (opened a script's input dialog in 208 ms), and
+    `expand` works semantically **and** verifies. Do not conclude from a refused `click` that a
+    tree item is unusable.
+11. **A script/EA dialog's input values are not readable.** The `Inputs` tab is a `listbox` whose
+    `ListViewSubItem`s come back as empty `statictext`: UIA reports the row count, not the
+    variable names or values. To know what a script will receive, read its `input` defaults in
+    the source, or have it write its resolved inputs to a file and check that.
